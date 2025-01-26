@@ -1,0 +1,4 @@
+test/*.elt
+/result
+/test/melpa/packages
+/test/melpa/working
