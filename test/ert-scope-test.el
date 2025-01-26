@@ -5,7 +5,7 @@
 
 ;;; Code:
 
-(ert-deftest ert-scope-with-temp-dir-2-test ()
+(ert-deftest ert-scope-with-temp-dir-success-test ()
   (cl-flet
       ((unscoped-test ()
          (find-file "foo.txt")
@@ -17,6 +17,19 @@
     (cl-flet
         ((scoped-test () (ert-scope-with-temp-dir tdir (unscoped-test))))
       (cl-loop for i from 0 to 5 do (scoped-test)))))
+
+(ert-deftest ert-scope-with-temp-dir-error-test ()
+  (cl-flet
+      ((unscoped-test ()
+         (find-file "foo.txt")
+         (should (= (point-max) 1))
+         (should (equal (buffer-name) "foo.txt"))
+         (insert "hello world")
+         (save-buffer)
+         (kill-this-buffer)))
+    (should-error
+     (ert-scope-with-temp-dir tdir (unscoped-test) (error "Oops")))
+    (ert-scope-with-temp-dir tdir (unscoped-test))))
 
 (ert-deftest ert-scope-buffers-test ()
   (cl-flet
