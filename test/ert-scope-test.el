@@ -18,6 +18,18 @@
         ((scoped-test () (ert-scope-with-temp-dir tdir (unscoped-test))))
       (cl-loop for i from 0 to 5 do (scoped-test)))))
 
+(ert-deftest ert-scope-buffers-test ()
+  (cl-flet
+      ((unscoped-test ()
+         (switch-to-buffer (get-buffer-create "foo.txt"))
+         (should (= (point-max) 1))
+         (insert "hello world")
+         (should (> (point-max) 1))))
+    (cl-flet
+        ((scoped-test () (ert-scope-buffers (unscoped-test))))
+      (cl-loop for i from 0 to 5 do (scoped-test)))))
+
+
 ;; (ert-deftest-async skip-empty-file-test (end)
 ;;   (letrec ((log-file "no-existing.log")
 ;;            (check

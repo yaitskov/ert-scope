@@ -62,7 +62,7 @@ Example:
         (with-curret-buffer \"foo\" (insert \"foo\")))))"
 
   `(let ((existed-buffers (buffer-list)))
-     (unwind-protect (progn ,body)
+     (unwind-protect (progn ,@body)
        (ert-scope-kill-buffers-of-list existed-buffers))))
 
 (defvar ert-scope-async-timeout-ahead 3
