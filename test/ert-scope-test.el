@@ -1,19 +1,23 @@
 ;;; ert-scope-test.el --- test ert-scope package  -*- lexical-binding: t -*-
-(require 'ert-scope)
 (require 'ert)
 (require 'ert-async)
+(require 'ert-scope)
 
 ;;; Code:
+
+(setq ert-async-timeout 2
+      ert-scope-async-timeout-ahead 1)
 
 (ert-deftest ert-scope-with-temp-dir-success-test ()
   (cl-flet
       ((unscoped-test ()
-         (find-file "foo.txt")
-         (should (= (point-max) 1))
-         (should (equal (buffer-name) "foo.txt"))
-         (insert "hello world")
-         (save-buffer)
-         (kill-this-buffer)))
+         (ert-scope-buffers
+          (should-not (get-buffer "foo.txt"))
+          (find-file "foo.txt")
+          (should (= (point-max) 1))
+          (should (equal (buffer-name) "foo.txt"))
+          (insert "hello world")
+          (save-buffer))))
     (cl-flet
         ((scoped-test () (ert-scope-with-temp-dir tdir (unscoped-test))))
       (cl-loop for i from 0 to 5 do (scoped-test)))))
@@ -21,12 +25,13 @@
 (ert-deftest ert-scope-with-temp-dir-error-test ()
   (cl-flet
       ((unscoped-test ()
-         (find-file "foo.txt")
-         (should (= (point-max) 1))
-         (should (equal (buffer-name) "foo.txt"))
-         (insert "hello world")
-         (save-buffer)
-         (kill-this-buffer)))
+         (ert-scope-buffers
+          (should-not (get-buffer "foo.txt"))
+          (find-file "foo.txt")
+          (should (= (point-max) 1))
+          (should (equal (buffer-name) "foo.txt"))
+          (insert "hello world")
+          (save-buffer))))
     (should-error
      (ert-scope-with-temp-dir tdir (unscoped-test) (error "Oops")))
     (ert-scope-with-temp-dir tdir (unscoped-test))))
@@ -42,60 +47,105 @@
         ((scoped-test () (ert-scope-buffers (unscoped-test))))
       (cl-loop for i from 0 to 5 do (scoped-test)))))
 
+(ert-deftest-async ert-scope-unwind-protect-end-unwinds-test (end)
+  (letrec
+      ((unwinded nil)
+       (ahead-of-ert-end
+        (lambda (&optional error-message)
+          (funcall end (if (= 1 unwinded) error-message "Unwind form is not executed")))))
+    (ert-scope-unwind-protect
+     ahead-of-ert-end
+     (run-at-time 0 nil (lambda () (funcall ahead-of-ert-end)))
+     (setq unwinded 0) ;; 2 forms
+     (setq unwinded (1+ unwinded)))))
 
-;; (ert-deftest-async skip-empty-file-test (end)
-;;   (letrec ((log-file "no-existing.log")
-;;            (check
-;;             (lambda ()
-;;               (remove-hook 'color-log-mode-evaled-hook check)
-;;               (when buffer-read-only
-;;                 (funcall end (concat "Buffer for [" log-file "] is immutable")))
-;;               (funcall end))))
-;;     (when (file-exists-p log-file)
-;;       (delete-file log-file))
-;;     (add-hook 'color-log-mode-evaled-hook check)
-;;     (without-buffers)
-;;     (find-file log-file)))
+(ert-deftest-async ert-scope-unwind-protect-timeout-unwinds-test (end)
+  (letrec
+      ((ahead-of-ert-end
+        (lambda (&optional error-message)
+          (funcall end error-message))))
+    (ert-scope-unwind-protect
+     ahead-of-ert-end
+     (message "Wait for time out...")
+     (message "Unwind section") ;; 2 forms
+     (funcall end))))
 
-;; (ert-deftest-async skip-big-file-test (end)
-;;   (letrec
-;;       ((l-log "l.log")
-;;        (override-file-limit
-;;         (lambda () (set (make-local-variable 'color-log-mode-big-file-size) 3)))
-;;        (check-SGR-exanded
-;;         (lambda ()
-;;           (let ((expected (f-read-text "x.log"))
-;;                 (notfaced (buffer-string)))
-;;             (remove-hook 'color-log-mode-hook override-file-limit)
-;;             (remove-hook 'color-log-mode-evaled-hook check-SGR-exanded)
-;;             (when buffer-read-only
-;;               (funcall end (concat "Buffer for [" l-log "] is immutable")))
-;;             (if (equal notfaced expected)
-;;                 (funcall end)
-;;               (funcall end (format "Expected:\n%s\nGot:\n%s\n" expected notfaced)))))))
-;;     (copy-file "./x.log" l-log t)
-;;     (without-buffers)
-;;     (find-file "l.txt")
-;;     (add-hook 'color-log-mode-evaled-hook check-SGR-exanded)
-;;     (add-hook 'color-log-mode-hook override-file-limit)
-;;     (find-file l-log)))
+(ert-deftest-async ert-scope-unwind-protect-nested-unwinds-test (end)
+  (letrec
+      ((unwinded nil)
+       (ahead-of-ert-end
+        (lambda (&optional error-message)
+          (if error-message
+              (funcall end error-message)
+            (when (= unwinded 3)
+              (funcall end))))))
+    (ert-scope-unwind-protect
+     ahead-of-ert-end
+     (ert-scope-unwind-protect
+      ahead-of-ert-end
+      (run-at-time 0 nil (lambda () (funcall ahead-of-ert-end)))
+      (setq unwinded 0) ;; 2 forms
+      (setq unwinded (1+ unwinded)))
+     (setq unwinded (+ 2 unwinded)))))
 
-;; (ert-deftest-async skip-file-without-any-SGR-test (end)
-;;   (letrec
-;;       ((check-SGR-exanded
-;;         (lambda ()
-;;           (let ((plain (f-read-text "l.txt"))
-;;                 (notfaced (buffer-string)))
-;;             (remove-hook 'color-log-mode-evaled-hook check-SGR-exanded)
-;;             (when buffer-read-only
-;;               (funcall end "Buffer for [l.log] is in read only mode"))
-;;             (if (equal plain notfaced)
-;;                 (funcall end)
-;;               (funcall end (format "Expected:\n%s\nGot:\n%s\n%s" plain notfaced (buffer-name))))))))
-;;     (copy-file "./l.txt" "l.log" t)
-;;     (add-hook 'color-log-mode-evaled-hook check-SGR-exanded)
-;;     (without-buffers)
-;;     (find-file "l.log")))
+(ert-deftest-async ert-scope-with-temp-dir-async-test (end)
+  (ert-scope-with-temp-dir-async
+   end tdir
+   (ert-scope-buffers
+     (find-file "foo.txt")
+     (should (= 1 (point-max)))
+     (insert "foo")
+     (save-buffer))
+   (run-at-time 0 nil end)))
+
+(ert-deftest-async ert-scope-with-temp-dir-async-2-test (end)
+  (ert-scope-with-temp-dir-async
+   end tdir
+   (ert-scope-buffers
+     (find-file "foo.txt")
+     (should (= 1 (point-max)))
+     (insert "foo")
+     (save-buffer))
+   (run-at-time 0 nil end)))
+
+(ert-deftest-async ert-scope-buffers-async-test (end)
+  (ert-scope-buffers-async
+   end
+   (should-not (get-buffer "foo.txt"))
+   (get-buffer-create "foo.txt")
+   (run-at-time 0 nil end)))
+
+(ert-deftest-async ert-scope-buffers-async-2-test (end)
+  (ert-scope-buffers-async
+   end
+   (should-not (get-buffer "foo.txt"))
+   (get-buffer-create "foo.txt")
+   (run-at-time 0 nil end)))
+
+(ert-deftest-async ert-scope-with-temp-dir-async-and-buffer-test (end)
+  (ert-scope-with-temp-dir-async
+   end tdir
+   (ert-scope-buffers-async
+    end
+    (should-not (get-buffer "foo.txt"))
+    (find-file "foo.txt")
+    (should (= 1 (point-max)))
+    (insert "foo")
+    (save-buffer)
+    (run-at-time 0 nil end))))
+
+(ert-deftest-async ert-scope-with-temp-dir-async-and-buffer-2-test (end)
+  (ert-scope-with-temp-dir-async
+   end tdir
+   (ert-scope-buffers-async
+    end
+    (should-not (get-buffer "foo.txt"))
+    (find-file "foo.txt")
+    (should (= 1 (point-max)))
+    (insert "foo")
+    (save-buffer)
+    (run-at-time 0 nil end))))
+
 
 (provide 'ert-scope-test)
 ;;; ert-scope-test.el ends here

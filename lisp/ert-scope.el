@@ -74,25 +74,29 @@ Example:
 END is provided by `ert-deftest-async'.
 BODYFORM is a protected block.
 UNWINDFORMS are executed at the END or on timeout."
-  `(letrec
-       ((timeout-timer-h
-         (run-at-time (- ert-async-timeout ert-scope-async-timeout-ahead) nil
-                      (lambda ()
-                        (progn ,unwindforms)
-                        (funcall ,end "ert-scope timeout"))))
-        (,end (lambda (&rest error-message)
-                (cancel-timer timeout-timer-h)
-                (progn ,unwindforms)
-                (funcall ,end error-message))))
-     (progn ,bodyform)))
+  `(let ((origin-end ,end))
+     (letrec
+         (
+          (timeout-timer-h
+           (run-at-time (max 0 (- ert-async-timeout ert-scope-async-timeout-ahead)) nil
+                        (lambda ()
+                          (unwind-protect
+                              (progn ,@unwindforms)
+                            (funcall origin-end "ert-scope timeout")))))
+          (,end (lambda (&optional error-message)
+                  (cancel-timer timeout-timer-h)
+                  (unwind-protect
+                      (progn ,@unwindforms)
+                    (funcall origin-end error-message)))))
+       ,bodyform)))
 
 (defmacro ert-scope-with-temp-dir-async (end tdir &rest body)
   "Create a temporary directory bound to TDIR and eval BODY.
 
 TDIR is used as a `default-directory' in the buffer.
 TDIR is deleted when END is called or a timeout happens."
-  `(let ((,tdir (make-temp-file "ert-tmpdir" t))
-         (default-directory ,tdir))
+  `(letrec ((,tdir (make-temp-file "ert-tmpdir" t))
+            (default-directory ,tdir))
      (ert-scope-unwind-protect
       ,end
       (progn ,@body)
@@ -116,11 +120,11 @@ Example:
         (add-hook 'python-mode-hook on-hook)
         (find-file \"foo.py\"))))"
   `(let
-       ((existed-buffers (buffer-list))
-        (ert-scope-unwind-protect
-         ,end
-         (progn ,body)
-         (ert-scope-kill-buffers-of-list existed-buffers)))))
+       ((existed-buffers (buffer-list)))
+     (ert-scope-unwind-protect
+      ,end
+      (progn ,@body)
+      (ert-scope-kill-buffers-of-list existed-buffers))))
 
 (provide 'ert-scope)
 ;;; ert-scope.el ends here
