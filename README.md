@@ -1,5 +1,7 @@
 # ert-scope package
 
+![GitHub Action Badge](https://github.com/cachix/install-nix-action/workflows/install-nix-action%20test/badge.svg)
+
 The package does not provide anything interactive.  It has a test
 wrapping macros improving ert test isolation.
 
