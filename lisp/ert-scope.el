@@ -112,11 +112,11 @@ Example:
        (letrec
         ((on-hook
            (lambda ()
-              (remove-hook 'python-mode-hook on-hook)
+              (remove-hook \='python-mode-hook on-hook)
               (if buffer-read-only
                   (end \"buffer read only\")
                 (end)))))
-        (add-hook 'python-mode-hook on-hook)
+        (add-hook \='python-mode-hook on-hook)
         (find-file \"foo.py\"))))"
   `(let
        ((existed-buffers (buffer-list)))
