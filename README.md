@@ -41,9 +41,10 @@ Not async version:
 
 (ert-deftest sync-test ()
   (ert-scope-with-temp-dir
-    (should-not (get-buffer "foo.txt"))
-    (find-file "foo.txt")
-    (should (= 1 (point-max)))
-    (insert "foo")
-    (save-buffer)))
+    (ert-scope-buffers
+      (should-not (get-buffer "foo.txt"))
+      (find-file "foo.txt")
+      (should (= 1 (point-max)))
+      (insert "foo")
+      (save-buffer))))
 ```
