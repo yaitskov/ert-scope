@@ -23,11 +23,11 @@ test scope ends:
 
 (ert-deftest-async async-test (end)
   (ert-scope-with-temp-dir-async
-   end
+   end cdir tdir
    (ert-scope-buffers-async
     end
     (should-not (get-buffer "foo.txt"))
-    (find-file "foo.txt")
+    (find-file (concat tdir "/foo.txt"))
     (should (= 1 (point-max)))
     (insert "foo")
     (save-buffer)
@@ -40,10 +40,10 @@ Not async version:
 (require 'ert-scope)
 
 (ert-deftest sync-test ()
-  (ert-scope-with-temp-dir
+  (ert-scope-with-temp-dir cdir tdir
     (ert-scope-buffers
       (should-not (get-buffer "foo.txt"))
-      (find-file "foo.txt")
+      (find-file (concat tdir "/foo.txt"))
       (should (= 1 (point-max)))
       (insert "foo")
       (save-buffer))))
