@@ -9,32 +9,30 @@
       ert-scope-async-timeout-ahead 1)
 
 (ert-deftest ert-scope-with-temp-dir-success-test ()
-  (cl-flet
-      ((unscoped-test ()
-         (ert-scope-buffers
-          (should-not (get-buffer "foo.txt"))
-          (find-file "foo.txt")
-          (should (= (point-max) 1))
-          (should (equal (buffer-name) "foo.txt"))
-          (insert "hello world")
-          (save-buffer))))
-    (cl-flet
-        ((scoped-test () (ert-scope-with-temp-dir (unscoped-test))))
-      (cl-loop for i from 0 to 5 do (scoped-test)))))
+  (cl-loop for i from 0 to 5
+           do (ert-scope-with-temp-dir
+               cdir tdir
+               (ert-scope-buffers
+                (should-not (get-buffer "foo.txt"))
+                (find-file (concat tdir "/foo.txt"))
+                (should (= (point-max) 1))
+                (should (equal (buffer-name) "foo.txt"))
+                (insert "hello world")
+                (save-buffer)))))
 
 (ert-deftest ert-scope-with-temp-dir-error-test ()
   (cl-flet
-      ((unscoped-test ()
+      ((unscoped-test (tdir)
          (ert-scope-buffers
           (should-not (get-buffer "foo.txt"))
-          (find-file "foo.txt")
+          (find-file (concat tdir "/foo.txt"))
           (should (= (point-max) 1))
           (should (equal (buffer-name) "foo.txt"))
           (insert "hello world")
           (save-buffer))))
     (should-error
-     (ert-scope-with-temp-dir (unscoped-test) (error "Oops")))
-    (ert-scope-with-temp-dir (unscoped-test))))
+     (ert-scope-with-temp-dir cdir tdir (unscoped-test tdir) (error "Oops")))
+    (ert-scope-with-temp-dir cdir tdir (unscoped-test tdir))))
 
 (ert-deftest ert-scope-buffers-test ()
   (cl-flet
@@ -90,9 +88,9 @@
 
 (ert-deftest-async ert-scope-with-temp-dir-async-test (end)
   (ert-scope-with-temp-dir-async
-   end tdir
+   end cdir tdir
    (ert-scope-buffers
-     (find-file "foo.txt")
+     (find-file (concat tdir "/foo.txt"))
      (should (= 1 (point-max)))
      (insert "foo")
      (save-buffer))
@@ -100,9 +98,9 @@
 
 (ert-deftest-async ert-scope-with-temp-dir-async-2-test (end)
   (ert-scope-with-temp-dir-async
-   end
+   end cdir tdir
    (ert-scope-buffers
-     (find-file "foo.txt")
+     (find-file (concat tdir "/foo.txt"))
      (should (= 1 (point-max)))
      (insert "foo")
      (save-buffer))
@@ -124,11 +122,11 @@
 
 (ert-deftest-async ert-scope-with-temp-dir-async-and-buffer-test (end)
   (ert-scope-with-temp-dir-async
-   end
+   end cdir tdir
    (ert-scope-buffers-async
     end
     (should-not (get-buffer "foo.txt"))
-    (find-file "foo.txt")
+    (find-file (concat tdir "/foo.txt"))
     (should (= 1 (point-max)))
     (insert "foo")
     (save-buffer)
@@ -136,11 +134,11 @@
 
 (ert-deftest-async ert-scope-with-temp-dir-async-and-buffer-2-test (end)
   (ert-scope-with-temp-dir-async
-   end
+   end cdir tdir
    (ert-scope-buffers-async
     end
     (should-not (get-buffer "foo.txt"))
-    (find-file "foo.txt")
+    (find-file (concat tdir "/foo.txt"))
     (should (= 1 (point-max)))
     (insert "foo")
     (save-buffer)
