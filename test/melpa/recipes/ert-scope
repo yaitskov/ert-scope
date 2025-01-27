@@ -1,0 +1,3 @@
+(ert-scope
+ :url "file:///home/dan/pro/my-emacs/ert-scope"
+ :fetcher git)
