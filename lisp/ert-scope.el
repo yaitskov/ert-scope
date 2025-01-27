@@ -30,13 +30,13 @@
 (require 'ert)
 (require 'ert-async)
 
-(defmacro ert-scope-with-temp-dir (tdir &rest body)
+(defmacro ert-scope-with-temp-dir (&rest body)
   "Create a temporary directory bound to TDIR and execute BODY."
-  `(letrec ((,tdir (make-temp-file "ert-tmpdir" t))
-            (default-directory ,tdir))
+  `(letrec ((tdir (make-temp-file "ert-tmpdir" t))
+            (default-directory tdir))
      (unwind-protect
          (progn ,@body)
-       (delete-directory ,tdir t))))
+       (delete-directory tdir t))))
 
 (defun ert-scope-kill-buffers-of-list (buffer-white-list)
   "Kill all buffers which are not on the BUFFER-WHITE-LIST."
@@ -90,17 +90,16 @@ UNWINDFORMS are executed at the END or on timeout."
                     (funcall origin-end error-message)))))
        ,bodyform)))
 
-(defmacro ert-scope-with-temp-dir-async (end tdir &rest body)
-  "Create a temporary directory bound to TDIR and eval BODY.
+(defmacro ert-scope-with-temp-dir-async (end &rest body)
+  "Create a temporary directory bound to `default-directory' and eval BODY.
 
-TDIR is used as a `default-directory' in the buffer.
-TDIR is deleted when END is called or a timeout happens."
-  `(letrec ((,tdir (make-temp-file "ert-tmpdir" t))
-            (default-directory ,tdir))
+the temporary directory is deleted when END is called or a timeout happens."
+  `(letrec ((tdir (make-temp-file "ert-tmpdir" t))
+            (default-directory tdir))
      (ert-scope-unwind-protect
       ,end
       (progn ,@body)
-      (delete-directory ,tdir t))))
+      (delete-directory tdir t))))
 
 (defmacro ert-scope-buffers-async (end &rest body)
   "Kill all buffers created within BODY when END is called or timeout occurs.
