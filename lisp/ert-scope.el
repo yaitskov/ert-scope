@@ -1,4 +1,4 @@
-;;; ert-scope.el --- Isolate buffers and files created within a scope of ert test  -*- lexical-binding: t -*-
+;;; ert-scope.el --- Isolated buffers and files created within the scope of an ERT test -*- lexical-binding: t -*-
 
 ;; Author: Daniil Iaitskov <dyaitskov@gmail.com>
 ;; Maintainer: Daniil Iaitskov <dyaitskov@gmail.com>
