@@ -5,7 +5,7 @@
 ;; URL: https://github.com/yaitskov/ert-scope
 ;; Version: 0.0.1
 ;; Keywords: lisp, tools
-;; Package-Requires: ((emacs "30.0") (ert-async "20200105.1031"))
+;; Package-Requires: ((emacs "29.4") (ert-async "0.1.2"))
 
 ;; The software is free software: you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by

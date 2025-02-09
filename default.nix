@@ -2,7 +2,7 @@
 }:
 with pkgs ;
 let
-  e = pkgs.emacs30;
+  e = pkgs.emacs29;
 in
 e.pkgs.trivialBuild {
   pname = "ert-scope";
