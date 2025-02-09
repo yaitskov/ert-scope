@@ -59,14 +59,19 @@
 
 (ert-deftest-async ert-scope-unwind-protect-timeout-unwinds-test (end)
   (letrec
-      ((ahead-of-ert-end
+      ((unwind-called 0)
+       (ahead-of-ert-end
         (lambda (&optional error-message)
-          (funcall end error-message))))
+          (if (= unwind-called 0)
+              (funcall end (format "unwind-called 0 : %s" error-message))
+            (if (equal "ert-scope timeout" error-message)
+                (funcall end)
+              (funcall end error-message))))))
     (ert-scope-unwind-protect
      ahead-of-ert-end
      (message "Wait for time out...")
      (message "Unwind section") ;; 2 forms
-     (funcall end))))
+     (setq unwind-called 1))))
 
 (ert-deftest-async ert-scope-unwind-protect-nested-unwinds-test (end)
   (letrec
